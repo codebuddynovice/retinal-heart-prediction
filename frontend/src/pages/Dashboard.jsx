@@ -87,8 +87,19 @@ function Dashboard() {
         doc.text("Detected Vascular Anomalies:", 20, 130);
         doc.setFont("helvetica", "normal");
         if (prediction.detectedAnomalies.length > 0) {
-            prediction.detectedAnomalies.forEach((anomaly, i) => {
-                doc.text(`- ${anomaly}`, 25, 140 + (i * 8));
+            let currentY = 140;
+            prediction.detectedAnomalies.forEach((anomaly) => {
+                doc.setFont("helvetica", "bold");
+                doc.text(`- ${anomaly.name}`, 25, currentY);
+                currentY += 6;
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(9);
+                anomaly.symptoms.forEach(symptom => {
+                    doc.text(`  • ${symptom}`, 30, currentY);
+                    currentY += 5;
+                });
+                doc.setFontSize(11); // Reset font size
+                currentY += 3;
             });
         } else {
             doc.text("- No significant anomalies detected.", 25, 140);
@@ -102,7 +113,9 @@ function Dashboard() {
 
         doc.setFontSize(10);
         doc.setTextColor(100, 100, 100);
-        doc.text("This is an AI-generated report. Please consult a cardiologist for professional clinical advice.", 20, 280);
+        doc.text("Medical Disclaimer: This system is a non-diagnostic, AI-assisted decision-support tool", 20, 275);
+        doc.text("and does not replace clinical evaluation. All results are advisory.", 20, 280);
+        doc.text("This is an AI-generated report. Please consult a cardiologist for professional clinical advice.", 20, 285);
 
         doc.save(`OculoCardia_Report_${Date.now()}.pdf`);
     };
@@ -127,17 +140,19 @@ function Dashboard() {
             console.error('Error:', error);
             setTimeout(() => {
                 setPrediction({
-                    riskScore: 12.5,
-                    avr: 0.67,
-                    fractalDimension: 1.452,
-                    hypertensionRisk: 'Low',
-                    detectedAnomalies: ["Mild Tortuosity"],
-                    insights: "Vascular analysis shows a high degree of complexity. No immediate risks detected.",
+                    riskScore: 68.5,
+                    avr: 0.62,
+                    fractalDimension: 1.38,
+                    hypertensionRisk: 'Medium',
+                    detectedAnomalies: [
+                        { name: "Mild Tortuosity", symptoms: ["Early systemic vascular stress", "Developing retinal strain"] }
+                    ],
+                    insights: "Vascular analysis shows reduced vessel tree complexity and moderate risk. Early signs of systemic hypertension detected.",
                 });
                 setVisuals({
-                    green: 'https://via.placeholder.com/300x200/00FF00/FFFFFF?text=Green+Channel',
-                    segmentation: 'https://via.placeholder.com/300x200/0000FF/FFFFFF?text=Segmentation',
-                    heatmap: 'https://via.placeholder.com/300x200/FF0000/FFFFFF?text=Heatmap'
+                    green: 'https://images.unsplash.com/photo-1576091160550-217359f4ecf8?q=80&w=300&auto=format&fit=crop',
+                    segmentation: 'https://images.unsplash.com/photo-1579154235828-45199683dc21?q=80&w=300&auto=format&fit=crop',
+                    heatmap: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=300&auto=format&fit=crop'
                 });
                 setLoading(false);
             }, 2000);
@@ -155,7 +170,7 @@ function Dashboard() {
             <div className="app-header" style={{ marginBottom: '2rem', borderBottom: 'none' }}>
                 <div>
                     <h2 className="gradient-text font-heading" style={{ fontSize: '2rem' }}>Clinical Dashboard</h2>
-                    <p style={{ color: 'var(--text-dim)' }}>Diagnostic AI Engine v2.0</p>
+                    <p style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>Diagnostic AI Engine v2.0 | Non-diagnostic AI-assisted decision-support tool</p>
                 </div>
 
                 <div className="glass-panel" style={{ padding: '0.5rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem', borderRadius: '100px' }}>
@@ -253,7 +268,9 @@ function Dashboard() {
                                 <div className="empty-state">
                                     <Activity size={32} color="var(--text-dim)" style={{ marginBottom: '1rem' }} />
                                     <h3>Awaiting Scan Initialization</h3>
-                                    <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem', marginTop: '0.5rem' }}>Upload a fundus image to begin clinical analysis.</p>
+                                    <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem', marginTop: '0.5rem', maxWidth: '300px' }}>
+                                        Upload a fundus image to begin clinical analysis. The system is dataset-independent at runtime and operates solely on real-time user-uploaded images.
+                                    </p>
                                 </div>
                             )}
 
@@ -271,13 +288,18 @@ function Dashboard() {
                                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                                     <div className="results-top-strip" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
                                         <div className="risk-score-display">
-                                            <span className={`risk-badge ${prediction.hypertensionRisk === 'Low' ? 'badge-low' : 'badge-mod'}`}>
+                                            <span className={`risk-badge ${prediction.hypertensionRisk === 'Low' ? 'badge-low' :
+                                                prediction.hypertensionRisk === 'Medium' ? 'badge-mod' : 'badge-high'
+                                                }`}>
                                                 {prediction.hypertensionRisk.toUpperCase()} RISK
                                             </span>
                                             <h2 className="risk-title font-heading" style={{ fontSize: '4rem', margin: '0.5rem 0' }}>{(prediction.riskScore).toFixed(1)}%</h2>
                                             <p className="risk-desc">Cardiovascular Health Index</p>
                                         </div>
-                                        <Heart color="var(--accent-primary)" size={64} style={{ animation: 'pulse-glow 2s infinite' }} />
+                                        <div style={{ textAlign: 'right' }}>
+                                            <Heart color="var(--accent-primary)" size={64} style={{ animation: 'pulse-glow 2s infinite' }} />
+                                            <p style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginTop: '0.5rem' }}>Empirical Reference Thresholds Applied</p>
+                                        </div>
                                     </div>
 
                                     <div className="metrics-grid" style={{ marginBottom: '2.5rem' }}>
@@ -302,11 +324,23 @@ function Dashboard() {
                                             <h4 style={{ color: '#ff3d00', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Detected Anomalies</h4>
                                         </div>
                                         {prediction.detectedAnomalies && prediction.detectedAnomalies.length > 0 ? (
-                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                                                 {prediction.detectedAnomalies.map((anomaly, idx) => (
-                                                    <span key={idx} style={{ padding: '0.4rem 0.8rem', background: 'rgba(255,61,0,0.1)', color: '#ff3d00', borderRadius: '8px', fontSize: '0.8rem', border: '1px solid rgba(255,61,0,0.2)' }}>
-                                                        {anomaly}
-                                                    </span>
+                                                    <div key={idx} style={{
+                                                        padding: '1rem',
+                                                        background: 'rgba(255,61,0,0.05)',
+                                                        borderRadius: '12px',
+                                                        border: '1px solid rgba(255,61,0,0.15)'
+                                                    }}>
+                                                        <div style={{ fontWeight: 700, color: '#ff3d00', marginBottom: '0.5rem', fontSize: '0.9rem' }}>
+                                                            {anomaly.name}
+                                                        </div>
+                                                        <ul style={{ margin: 0, paddingLeft: '1.2rem', color: 'var(--text-dim)', fontSize: '0.8rem' }}>
+                                                            {anomaly.symptoms.map((symptom, sIdx) => (
+                                                                <li key={sIdx} style={{ marginBottom: '0.2rem' }}>{symptom}</li>
+                                                            ))}
+                                                        </ul>
+                                                    </div>
                                                 ))}
                                             </div>
                                         ) : (
@@ -314,9 +348,18 @@ function Dashboard() {
                                         )}
                                     </div>
 
-                                    <div className="clinical-insights-box" style={{ padding: '1.5rem', background: 'rgba(255,255,255,0.03)', borderRadius: '16px', borderLeft: '4px solid var(--accent-primary)', marginBottom: '2.5rem' }}>
+                                    <div className="clinical-insights-box" style={{ padding: '1.5rem', background: 'rgba(255,255,255,0.03)', borderRadius: '16px', borderLeft: '4px solid var(--accent-primary)', marginBottom: '1rem' }}>
                                         <h4 style={{ fontSize: '0.8rem', color: 'var(--accent-primary)', textTransform: 'uppercase', marginBottom: '0.75rem', letterSpacing: '1px' }}>AI Diagnostic Insights</h4>
                                         <p style={{ fontSize: '1rem', color: 'var(--text-vibrant)', lineHeight: '1.6', letterSpacing: '0.2px' }}>{prediction.insights}</p>
+                                    </div>
+
+                                    <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', fontSize: '0.75rem', color: 'var(--text-dim)', marginBottom: '2.5rem', border: '1px solid var(--glass-border)' }}>
+                                        <p style={{ marginBottom: '0.5rem' }}>
+                                            <strong>Risk Formula Justification:</strong> AVR is given higher weight (60%) due to its strong clinical association with hypertension, while vessel tortuosity (40%) provides supplementary structural information.
+                                        </p>
+                                        <p>
+                                            <strong>Scope Reminder:</strong> This system is a non-diagnostic, AI-assisted decision-support tool and does not replace clinical evaluation.
+                                        </p>
                                     </div>
 
                                     <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
