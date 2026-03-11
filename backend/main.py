@@ -1,5 +1,7 @@
 from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import Optional, List, Dict
 import uvicorn
 import utils
 
@@ -13,6 +15,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+class ChatRequest(BaseModel):
+    message: str
+    context: Optional[Dict] = None
 
 @app.get("/")
 async def root():
@@ -34,6 +40,14 @@ async def predict(file: UploadFile = File(...)):
             "visuals": result["images"],
             "message": "Clinical analysis complete."
         }
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@app.post("/chat")
+async def chat(request: ChatRequest):
+    try:
+        response = utils.generate_chat_response(request.message, request.context)
+        return {"status": "success", "response": response}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 

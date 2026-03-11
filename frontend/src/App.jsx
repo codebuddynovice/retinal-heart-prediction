@@ -17,6 +17,8 @@ import { AnimatePresence } from 'framer-motion';
 import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
 import About from './pages/About';
+import Prevention from './pages/Prevention';
+import ChatWidget from './components/ChatWidget';
 
 const App = () => {
   const [isMinimized, setIsMinimized] = useState(true);
@@ -57,6 +59,7 @@ const App = () => {
               <Route path="/" element={<Home />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/about" element={<About />} />
+              <Route path="/prevention" element={<Prevention />} />
               <Route path="/settings" element={
                 <div className="glass-panel" style={{ padding: '4rem', textAlign: 'center' }}>
                   <Settings size={48} color="var(--text-dim)" style={{ marginBottom: '1.5rem' }} />
@@ -67,6 +70,7 @@ const App = () => {
             </Routes>
           </AnimatePresence>
         </main>
+        <ChatWidget />
       </div>
 
       <style dangerouslySetInnerHTML={{

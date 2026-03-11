@@ -76,7 +76,7 @@ const Home = () => {
                     variants={itemVariants}
                     icon={<Microscope size={32} className="card-icon" />}
                     title="Clinical Accuracy"
-                    description="Trained on UK Biobank and DRIVE datasets for high precision vascular mapping."
+                    description="Trained on Kaggle and DRIVE datasets for high precision vascular mapping."
                 />
                 <FeatureCard
                     variants={itemVariants}

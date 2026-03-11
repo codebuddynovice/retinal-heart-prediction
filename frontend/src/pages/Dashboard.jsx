@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { jsPDF } from 'jspdf';
 import {
     Upload,
@@ -16,10 +17,14 @@ import {
     Share2,
     Printer,
     AlertTriangle,
+    TrendingUp,
+    Calendar,
     FileDown
 } from 'lucide-react';
+import ChatWidget from '../components/ChatWidget';
 
 function Dashboard() {
+    const navigate = useNavigate();
     const [file, setFile] = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -105,7 +110,6 @@ function Dashboard() {
             doc.text("- No significant anomalies detected.", 25, 140);
         }
 
-        doc.setFont("helvetica", "bold");
         doc.text("AI Diagnostic Insights:", 20, 170);
         doc.setFont("helvetica", "normal");
         const splitText = doc.splitTextToSize(prediction.insights, 170);
@@ -148,6 +152,16 @@ function Dashboard() {
                         { name: "Mild Tortuosity", symptoms: ["Early systemic vascular stress", "Developing retinal strain"] }
                     ],
                     insights: "Vascular analysis shows reduced vessel tree complexity and moderate risk. Early signs of systemic hypertension detected.",
+                    prevention: {
+                        tips: [
+                            "Reduce sodium intake to under 2,300mg/day.",
+                            "Introduce 30 mins of daily brisk walking.",
+                            "Monitor blood pressure bi-weekly.",
+                            "Marker Alert: Low AVR suggests persistent arteriolar narrowing."
+                        ],
+                        plan30Day: "Week 1: Salt reduction. Week 2: Daily morning walks. Week 3: Stress management. Week 4: Follow-up BP check.",
+                        reversalTimeline: "3-6 Months: Arteriolar narrowing can stabilize with strict BP control."
+                    }
                 });
                 setVisuals({
                     green: 'https://images.unsplash.com/photo-1576091160550-217359f4ecf8?q=80&w=300&auto=format&fit=crop',
@@ -353,7 +367,7 @@ function Dashboard() {
                                         <p style={{ fontSize: '1rem', color: 'var(--text-vibrant)', lineHeight: '1.6', letterSpacing: '0.2px' }}>{prediction.insights}</p>
                                     </div>
 
-                                    <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', fontSize: '0.75rem', color: 'var(--text-dim)', marginBottom: '2.5rem', border: '1px solid var(--glass-border)' }}>
+                                    <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', fontSize: '0.75rem', color: 'var(--text-dim)', marginBottom: '1.5rem', border: '1px solid var(--glass-border)' }}>
                                         <p style={{ marginBottom: '0.5rem' }}>
                                             <strong>Risk Formula Justification:</strong> AVR is given higher weight (60%) due to its strong clinical association with hypertension, while vessel tortuosity (40%) provides supplementary structural information.
                                         </p>
@@ -362,11 +376,22 @@ function Dashboard() {
                                         </p>
                                     </div>
 
-                                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
-                                        <button className="btn-action" onClick={generatePDF} disabled={!prediction} style={{ width: '100%', maxWidth: '400px' }}>
+                                    <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginBottom: '1rem' }}>
+                                        <button className="btn-action" onClick={generatePDF} disabled={!prediction} style={{ flex: 1, maxWidth: '300px' }}>
                                             <FileDown size={20} />
-                                            Export PDF Clinical Report
+                                            Export Clinical Results
                                         </button>
+                                        
+                                        {prediction.prevention && (
+                                            <button 
+                                                className="btn-action" 
+                                                onClick={() => navigate('/prevention', { state: { prevention: prediction.prevention, riskLevel: prediction.hypertensionRisk } })}
+                                                style={{ flex: 1, maxWidth: '300px', background: 'transparent', border: '1px solid var(--accent-primary)', color: 'var(--accent-primary)' }}
+                                            >
+                                                <ShieldCheck size={20} />
+                                                View Prevention Roadmap
+                                            </button>
+                                        )}
                                     </div>
                                 </motion.div>
                             )}
@@ -374,6 +399,9 @@ function Dashboard() {
                     </section>
                 </div>
             </main>
+            
+            {/* Clinical AI Chatbot */}
+            <ChatWidget context={prediction} />
         </motion.div>
     );
 }

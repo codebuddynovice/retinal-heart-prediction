@@ -17,7 +17,7 @@
 ## 🛠️ Tech Stack
 - **Frontend**: React (Vite), Lucide Icons, Vanilla CSS (Glassmorphism).
 - **Backend**: Python (FastAPI), OpenCV, NumPy.
-- **AI Models**: Designed for U-Net (Segmentation) and EfficientNet (Prediction).
+- **AI Models**: Designed for U-Net (Segmentation) and ResNet-50 (Prediction).
 
 ## 📊 System Validation
 The system was validated using publicly available retinal images (such as the DRIVE dataset) to verify vessel enhancement and anomaly detection accuracy. Manual verification was performed to ensure the anomaly detection logic aligns with clinical markers for vascular stress.

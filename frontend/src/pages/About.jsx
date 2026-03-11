@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Brain, Cpu, Database, Eye, Activity, ShieldCheck } from 'lucide-react';
 
 const About = () => {
+    const [showModal, setShowModal] = useState(false);
+
     const features = [
         {
             icon: <Eye className="text-cyan-400" />,
@@ -17,7 +19,7 @@ const About = () => {
         {
             icon: <Cpu className="text-indigo-400" />,
             title: "Deep Inference",
-            desc: "Using EfficientNet-B0 to calculate risk scores based on vascular tortuosity."
+            desc: "Using ResNet-50 to calculate risk scores based on vascular tortuosity."
         },
         {
             icon: <Activity className="text-emerald-400" />,
@@ -84,13 +86,52 @@ const About = () => {
                     </div>
                     <h3 className="font-heading">Data Sourcing</h3>
                     <p style={{ color: 'var(--text-muted)', marginTop: '1rem' }}>
-                        Validated against the **DRIVE** and **UK Biobank** datasets, containing over 50,000+ clinical retinal scans.
+                        Validated against the DRIVE and Kaggle datasets, containing over 1,000+ clinical retinal scans.
                     </p>
-                    <button className="btn-action" style={{ marginTop: '2rem', background: 'transparent', border: '1px solid var(--accent-primary)', color: 'var(--accent-primary)' }}>
+                    <button 
+                        className="btn-action" 
+                        onClick={() => setShowModal(true)}
+                        style={{ marginTop: '2rem', background: 'transparent', border: '1px solid var(--accent-primary)', color: 'var(--accent-primary)' }}
+                    >
                         Dataset Documentation
                     </button>
                 </div>
             </div>
+
+            {/* Dataset Documentation Modal */}
+            {showModal && (
+                <div className="modal-overlay" onClick={() => setShowModal(false)}>
+                    <motion.div 
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className="glass-panel modal-content"
+                        onClick={e => e.stopPropagation()}
+                        style={{ maxWidth: '600px', width: '90%', padding: '2.5rem', position: 'relative' }}
+                    >
+                        <button className="modal-close" onClick={() => setShowModal(false)}>×</button>
+                        <h3 className="font-heading" style={{ color: 'var(--accent-primary)', marginBottom: '1.5rem', fontSize: '1.8rem' }}>Dataset Specifications</h3>
+                        
+                        <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                            <div className="dataset-source">
+                                <h4 style={{ color: 'white', marginBottom: '0.5rem' }}>1. DRIVE Dataset</h4>
+                                <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem' }}>Used for U-Net vessel segmentation training. Contains 40 professional fundus images with ground truth vessel masks.</p>
+                                <a href="https://drive.grand-challenge.org/" target="_blank" rel="noreferrer" style={{ color: 'var(--accent-primary)', fontSize: '0.8rem', textDecoration: 'none' }}>Official Page ↗</a>
+                            </div>
+
+                            <div className="dataset-source">
+                                <h4 style={{ color: 'white', marginBottom: '0.5rem' }}>2. EyePACS (Kaggle)</h4>
+                                <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem' }}>Used for classification and risk scoring. 1,000+ local samples categorized from class 0 (Normal) to 4 (Severe) based on clinical retinopathy markers.</p>
+                                <a href="https://www.kaggle.com/c/diabetic-retinopathy-detection" target="_blank" rel="noreferrer" style={{ color: 'var(--accent-primary)', fontSize: '0.8rem', textDecoration: 'none' }}>Official Page ↗</a>
+                            </div>
+
+                            <div className="dataset-source" style={{ background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '12px' }}>
+                                <h4 style={{ color: 'white', marginBottom: '0.5rem', fontSize: '0.9rem' }}>Validation Integrity</h4>
+                                <p style={{ color: 'var(--text-dim)', fontSize: '0.8rem' }}>Validation sets were strictly partitioned (15%) to ensure the ResNet-50 and U-Net models generalize across different camera hardware and lighting conditions.</p>
+                            </div>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
 
             <style dangerouslySetInnerHTML={{
                 __html: `
@@ -111,6 +152,33 @@ const About = () => {
         }
         .step-title { font-weight: 600; color: white; }
         .step-desc { color: var(--text-dim); font-size: 0.85rem; }
+
+        .modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0,0,0,0.8);
+          backdrop-filter: blur(10px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1000;
+        }
+        .modal-close {
+          position: absolute;
+          top: 1rem;
+          right: 1.5rem;
+          background: none;
+          border: none;
+          color: white;
+          font-size: 2rem;
+          cursor: pointer;
+          opacity: 0.5;
+          transition: 0.3s;
+        }
+        .modal-close:hover { opacity: 1; }
       `}} />
         </motion.div>
     );

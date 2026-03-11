@@ -7,6 +7,13 @@ import torch
 import torch.nn as nn
 from torchvision import models, transforms
 from PIL import Image
+import google.generativeai as genai
+from typing import Optional
+
+# Gemini Configuration
+GEMINI_API_KEY = "AIzaSyBViNs_ysFgEhvhBnXEincF3Bu3k3u820o"
+genai.configure(api_key=GEMINI_API_KEY)
+chat_model = genai.GenerativeModel('gemini-2.5-flash')
 
 # Load the trained model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -182,7 +189,8 @@ def analyze_retina(image_bytes: bytes):
             "fractalDimension": round(fd, 3),
             "hypertensionRisk": risk_level,
             "detectedAnomalies": anomalies,
-            "insights": insights
+            "insights": insights,
+            "prevention": get_prevention_plan(risk_level, avr, fd)
         },
         "images": {
             "green": f"data:image/jpeg;base64,{encode_img_to_base64(green)}",
@@ -190,3 +198,80 @@ def analyze_retina(image_bytes: bytes):
             "heatmap": f"data:image/jpeg;base64,{encode_img_to_base64(heatmap)}"
         }
     }
+
+def get_prevention_plan(risk_level, avr, fd):
+    """Generates personalized prevention and lifestyle plans."""
+    
+    # Generic mapping for risk levels
+    plans = {
+        "Low": {
+            "tips": [
+                "Maintain your current balanced diet.",
+                "Continue 150 minutes of moderate aerobic activity weekly.",
+                "Get routinely screened every 2 years."
+            ],
+            "plan30Day": "Week 1-4: Focus on diversity in colors on your plate. Sustain 7-8 hours of sleep.",
+            "reversalTimeline": "Baseline Maintenance: Vascular health is currently optimal."
+        },
+        "Medium": {
+            "tips": [
+                "Reduce sodium intake to under 2,300mg per day.",
+                "Introduce 30 mins of brisk walking daily.",
+                "Monitor blood pressure bi-weekly."
+            ],
+            "plan30Day": "Week 1: Salt reduction. Week 2: Daily morning walks. Week 3: Stress management via meditation. Week 4: Follow-up BP check.",
+            "reversalTimeline": "3-6 Months: Arteriolar narrowing can stabilize or show subtle improvement with strict BP control."
+        },
+        "High": {
+            "tips": [
+                "URGENT: Consult a cardiologist for a full workup.",
+                "Strict DASH diet adherence (low sodium, high potassium).",
+                "Begin medically supervised exercise regimen.",
+                "Daily blood pressure monitoring."
+            ],
+            "plan30Day": "Week 1: Medical diagnostic tests. Week 2: Medication adherence (if prescribed) & Diet overhaul. Week 3: Supervised light exercise. Week 4: Comprehensive re-evaluation.",
+            "reversalTimeline": "6-12 Months: Severe markers like AV nicking are permanent, but risk of stroke/infarction can be reduced by 40% with intervention."
+        }
+    }
+
+    # Add marker-specific tips
+    personalized = plans.get(risk_level, plans["Medium"]).copy()
+    
+    if avr < 0.6:
+        personalized["tips"].append("Marker Alert: Low AVR suggests persistent arteriolar narrowing. Limit caffeine and high-stress environments.")
+    
+    if fd < 1.35:
+        personalized["tips"].append("Marker Alert: Reduced Fractal Complexity suggests thinning of the vessel tree. Increase Omega-3 intake.")
+
+    return personalized
+
+def generate_chat_response(message: str, context: Optional[dict] = None):
+    """Generates a response using Gemini 2.5 Flash with a friendly, simple persona."""
+    system_prompt = (
+        "You are 'Oculo', a friendly and helpful health assistant for this retinal screening app. "
+        "Your job is to explain things in very simple, easy-to-understand language. Avoid using too much "
+        "medical jargon.\n\n"
+        "GUIDELINES:\n"
+        "1. Do NOT start your responses with greetings or introduce yourself (e.g., skip 'Hi there', 'I am Oculo'). Just answer the user's question directly.\n"
+        "2. Be warm, supportive, and use simple words.\n"
+        "3. If the user asks about their results, explain what the numbers (like AVR or Risk) mean in a way "
+        "a normal person would understand.\n"
+        "4. ALWAYS remind the user in a friendly way that you are an AI and they should talk to a real doctor "
+        "if they have concerns.\n"
+        "5. Keep your answers short and sweet."
+    )
+
+    full_prompt = system_prompt
+    if context:
+        # Clean context for prompt
+        clean_context = {k: v for k, v in context.items() if k != 'images'}
+        full_prompt += f"\nCURRENT CLINICAL CONTEXT: {clean_context}\n"
+    
+    full_prompt += f"\nUSER MESSAGE: {message}\n"
+
+    try:
+        response = chat_model.generate_content(full_prompt)
+        return response.text
+    except Exception as e:
+        print(f"Gemini API Error: {e}")
+        return "I'm having trouble connecting to the clinical intelligence engine. Please try again in a moment."

@@ -8,3 +8,4 @@ torchvision
 matplotlib
 pillow
 scikit-image
+google-generativeai
