@@ -49,3 +49,7 @@ Thumbs.db
 
 # Data and large models
 data/
+backend/*.db
+backend/uploads/
+server_log.txt
+checkpoint_*

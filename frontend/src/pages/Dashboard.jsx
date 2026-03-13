@@ -22,6 +22,7 @@ import {
     FileDown
 } from 'lucide-react';
 import ChatWidget from '../components/ChatWidget';
+import { getAuth } from './Login';
 
 function Dashboard() {
     const navigate = useNavigate();
@@ -31,6 +32,10 @@ function Dashboard() {
     const [prediction, setPrediction] = useState(null);
     const [visuals, setVisuals] = useState(null);
     const [dragActive, setDragActive] = useState(false);
+    const [history, setHistory] = useState([]);
+    const [showHistory, setShowHistory] = useState(false);
+
+    const { token } = getAuth();
 
     const handleFile = (selectedFile) => {
         if (selectedFile && selectedFile.type.startsWith('image/')) {
@@ -134,9 +139,12 @@ function Dashboard() {
         try {
             const response = await fetch('http://localhost:8000/predict', {
                 method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
                 body: formData,
             });
-            if (!response.ok) throw new Error('Backend unreachale');
+            if (!response.ok) throw new Error('Backend unreachable');
             const data = await response.json();
             setPrediction(data.prediction);
             setVisuals(data.visuals);
@@ -173,7 +181,25 @@ function Dashboard() {
             return;
         }
         setLoading(false);
+        fetchHistory(); // Refresh history after new prediction
     };
+
+    const fetchHistory = async () => {
+        if (!token) return;
+        try {
+            const response = await fetch('http://localhost:8000/history', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            if (data.status === 'success') setHistory(data.history);
+        } catch (err) {
+            console.error('Failed to fetch history', err);
+        }
+    };
+
+    React.useEffect(() => {
+        fetchHistory();
+    }, []);
 
     return (
         <motion.div
@@ -187,9 +213,21 @@ function Dashboard() {
                     <p style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>Diagnostic AI Engine v2.0 | Non-diagnostic AI-assisted decision-support tool</p>
                 </div>
 
-                <div className="glass-panel" style={{ padding: '0.5rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem', borderRadius: '100px' }}>
-                    <div style={{ width: 8, height: 8, background: 'var(--success)', borderRadius: '50%', boxShadow: '0 0 10px var(--success)' }}></div>
-                    <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Engine Active</span>
+                <div style={{ display: 'flex', gap: '1rem' }}>
+                    <button 
+                        className={`nav-link ${!showHistory ? 'active' : ''}`}
+                        onClick={() => setShowHistory(false)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.5rem 1rem' }}
+                    >
+                        New Analysis
+                    </button>
+                    <button 
+                        className={`nav-link ${showHistory ? 'active' : ''}`}
+                        onClick={() => setShowHistory(true)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.5rem 1rem' }}
+                    >
+                        Medical History ({history.length})
+                    </button>
                 </div>
             </div>
 
@@ -234,169 +272,212 @@ function Dashboard() {
                 </aside>
 
                 <div className="dashboard-content" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                    {/* 1. Analysis Pipeline (Visuals) on TOP */}
-                    {visuals && (
-                        <motion.div
-                            initial={{ opacity: 0, y: -20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="visuals-container glass-panel"
-                            style={{ padding: '2rem' }}
-                        >
-                            <div className="section-header" style={{ marginBottom: '1.5rem' }}>
-                                <h3 style={{ fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                    <ScanHeart size={20} color="var(--accent-primary)" />
-                                    AI Computer Vision Pipeline
-                                </h3>
-                            </div>
-                            <div className="visual-pipeline-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem' }}>
-                                <div className="visual-step">
-                                    <p className="step-label" style={{ fontSize: '0.7rem', color: 'var(--accent-primary)', marginBottom: '0.75rem', fontWeight: 600 }}>I. GREEN CHANNEL</p>
-                                    <div className="img-frame" style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--glass-border)' }}>
-                                        <img src={visuals.green} style={{ width: '100%', display: 'block' }} alt="Green Channel" />
-                                    </div>
-                                </div>
-                                <div className="visual-step">
-                                    <p className="step-label" style={{ fontSize: '0.7rem', color: 'var(--accent-primary)', marginBottom: '0.75rem', fontWeight: 600 }}>II. U-NET SEGMENTATION</p>
-                                    <div className="img-frame" style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--glass-border)', background: '#000' }}>
-                                        <img src={visuals.segmentation} style={{ width: '100%', display: 'block', filter: 'invert(1)' }} alt="Segmentation" />
-                                    </div>
-                                </div>
-                                <div className="visual-step">
-                                    <p className="step-label" style={{ fontSize: '0.7rem', color: 'var(--accent-primary)', marginBottom: '0.75rem', fontWeight: 600 }}>III. GRAD-CAM HEATMAP</p>
-                                    <div className="img-frame" style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--glass-border)' }}>
-                                        <img src={visuals.heatmap} style={{ width: '100%', display: 'block' }} alt="Heatmap" />
-                                    </div>
-                                </div>
-                            </div>
-                        </motion.div>
-                    )}
-
-                    {/* 2. Analysis Results BELOW */}
-                    <section className="results-card glass-panel" style={{ width: '100%' }}>
-                        <div className="results-header">
-                            <h2 style={{ fontSize: '1.25rem' }}>Analysis Results & Clinical Synthesis</h2>
-                        </div>
-
-                        <div className="results-body">
-                            {!prediction && !loading && (
-                                <div className="empty-state">
-                                    <Activity size={32} color="var(--text-dim)" style={{ marginBottom: '1rem' }} />
-                                    <h3>Awaiting Scan Initialization</h3>
-                                    <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem', marginTop: '0.5rem', maxWidth: '300px' }}>
-                                        Upload a fundus image to begin clinical analysis. The system is dataset-independent at runtime and operates solely on real-time user-uploaded images.
-                                    </p>
-                                </div>
-                            )}
-
-                            {loading && (
-                                <div className="empty-state">
-                                    <div className="loading-orbit">
-                                        <div className="orbit-circle"></div>
-                                        <ScanHeart size={32} color="var(--accent-primary)" />
-                                    </div>
-                                    <p style={{ marginTop: '1.5rem', color: 'var(--accent-primary)', fontWeight: 600 }}>Running Neural Diagnostics...</p>
-                                </div>
-                            )}
-
-                            {prediction && (
-                                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                                    <div className="results-top-strip" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
-                                        <div className="risk-score-display">
-                                            <span className={`risk-badge ${prediction.hypertensionRisk === 'Low' ? 'badge-low' :
-                                                prediction.hypertensionRisk === 'Medium' ? 'badge-mod' : 'badge-high'
-                                                }`}>
-                                                {prediction.hypertensionRisk.toUpperCase()} RISK
-                                            </span>
-                                            <h2 className="risk-title font-heading" style={{ fontSize: '4rem', margin: '0.5rem 0' }}>{(prediction.riskScore).toFixed(1)}%</h2>
-                                            <p className="risk-desc">Cardiovascular Health Index</p>
-                                        </div>
-                                        <div style={{ textAlign: 'right' }}>
-                                            <Heart color="var(--accent-primary)" size={64} style={{ animation: 'pulse-glow 2s infinite' }} />
-                                            <p style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginTop: '0.5rem' }}>Empirical Reference Thresholds Applied</p>
-                                        </div>
-                                    </div>
-
-                                    <div className="metrics-grid" style={{ marginBottom: '2.5rem' }}>
-                                        <div className="metric-item">
-                                            <div className="metric-value accent-text">{prediction.avr}</div>
-                                            <div className="metric-name">A:V Ratio</div>
-                                        </div>
-                                        <div className="metric-item">
-                                            <div className="metric-value accent-text">{(prediction.fractalDimension).toFixed(3)}</div>
-                                            <div className="metric-name">Fractal Dimension</div>
-                                        </div>
-                                        <div className="metric-item">
-                                            <div className="metric-value accent-text">{prediction.hypertensionRisk}</div>
-                                            <div className="metric-name">HTN Category</div>
-                                        </div>
-                                    </div>
-
-                                    {/* Anomalies Section */}
-                                    <div className="anomalies-section" style={{ padding: '1.5rem', background: 'rgba(255,50,50,0.03)', borderRadius: '16px', border: '1px solid rgba(255,50,50,0.1)', marginBottom: '1.5rem' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-                                            <AlertTriangle size={18} color="#ff3d00" />
-                                            <h4 style={{ color: '#ff3d00', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Detected Anomalies</h4>
-                                        </div>
-                                        {prediction.detectedAnomalies && prediction.detectedAnomalies.length > 0 ? (
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                                {prediction.detectedAnomalies.map((anomaly, idx) => (
-                                                    <div key={idx} style={{
-                                                        padding: '1rem',
-                                                        background: 'rgba(255,61,0,0.05)',
-                                                        borderRadius: '12px',
-                                                        border: '1px solid rgba(255,61,0,0.15)'
-                                                    }}>
-                                                        <div style={{ fontWeight: 700, color: '#ff3d00', marginBottom: '0.5rem', fontSize: '0.9rem' }}>
-                                                            {anomaly.name}
-                                                        </div>
-                                                        <ul style={{ margin: 0, paddingLeft: '1.2rem', color: 'var(--text-dim)', fontSize: '0.8rem' }}>
-                                                            {anomaly.symptoms.map((symptom, sIdx) => (
-                                                                <li key={sIdx} style={{ marginBottom: '0.2rem' }}>{symptom}</li>
-                                                            ))}
-                                                        </ul>
-                                                    </div>
-                                                ))}
+                    {showHistory ? (
+                        <div className="glass-panel" style={{ padding: '2rem' }}>
+                            <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                <Clock size={20} color="var(--accent-primary)" />
+                                Historical Records
+                            </h3>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                {history.length === 0 ? (
+                                    <p style={{ color: 'var(--text-dim)', textAlign: 'center', padding: '3rem' }}>No past records found.</p>
+                                ) : (
+                                    history.map((record) => (
+                                        <div key={record.id} className="glass-panel" style={{ 
+                                            padding: '1rem', 
+                                            display: 'flex', 
+                                            justifyContent: 'space-between', 
+                                            alignItems: 'center',
+                                            border: '1px solid rgba(255,255,255,0.05)'
+                                        }}>
+                                            <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
+                                                <div style={{ width: 50, height: 50, borderRadius: '8px', overflow: 'hidden', background: '#000' }}>
+                                                    <img src={`http://localhost:8000/${record.image}`} alt="Scan" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.7 }} />
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontWeight: 600, color: 'var(--text-vibrant)' }}>Scan Ref #{record.id}</div>
+                                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>{new Date(record.timestamp).toLocaleString()}</div>
+                                                </div>
                                             </div>
-                                        ) : (
-                                            <p style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>No significant vascular anomalies detected in this scan.</p>
-                                        )}
+                                            <div style={{ textAlign: 'right' }}>
+                                                <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--accent-primary)' }}>{record.metrics.riskScore}% Risk</div>
+                                                <div style={{ fontSize: '0.7rem', color: record.metrics.hypertensionRisk === 'High' ? 'var(--danger)' : 'var(--success)' }}>
+                                                    {record.metrics.hypertensionRisk.toUpperCase()}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    ) : (
+                        <>
+                            {/* 1. Analysis Pipeline (Visuals) on TOP */}
+                            {visuals && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: -20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="visuals-container glass-panel"
+                                    style={{ padding: '2rem' }}
+                                >
+                                    {/* ... pipeline code ... */}
+                                    <div className="section-header" style={{ marginBottom: '1.5rem' }}>
+                                        <h3 style={{ fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                            <ScanHeart size={20} color="var(--accent-primary)" />
+                                            AI Computer Vision Pipeline
+                                        </h3>
                                     </div>
-
-                                    <div className="clinical-insights-box" style={{ padding: '1.5rem', background: 'rgba(255,255,255,0.03)', borderRadius: '16px', borderLeft: '4px solid var(--accent-primary)', marginBottom: '1rem' }}>
-                                        <h4 style={{ fontSize: '0.8rem', color: 'var(--accent-primary)', textTransform: 'uppercase', marginBottom: '0.75rem', letterSpacing: '1px' }}>AI Diagnostic Insights</h4>
-                                        <p style={{ fontSize: '1rem', color: 'var(--text-vibrant)', lineHeight: '1.6', letterSpacing: '0.2px' }}>{prediction.insights}</p>
-                                    </div>
-
-                                    <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', fontSize: '0.75rem', color: 'var(--text-dim)', marginBottom: '1.5rem', border: '1px solid var(--glass-border)' }}>
-                                        <p style={{ marginBottom: '0.5rem' }}>
-                                            <strong>Risk Formula Justification:</strong> AVR is given higher weight (60%) due to its strong clinical association with hypertension, while vessel tortuosity (40%) provides supplementary structural information.
-                                        </p>
-                                        <p>
-                                            <strong>Scope Reminder:</strong> This system is a non-diagnostic, AI-assisted decision-support tool and does not replace clinical evaluation.
-                                        </p>
-                                    </div>
-
-                                    <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginBottom: '1rem' }}>
-                                        <button className="btn-action" onClick={generatePDF} disabled={!prediction} style={{ flex: 1, maxWidth: '300px' }}>
-                                            <FileDown size={20} />
-                                            Export Clinical Results
-                                        </button>
-                                        
-                                        {prediction.prevention && (
-                                            <button 
-                                                className="btn-action" 
-                                                onClick={() => navigate('/prevention', { state: { prevention: prediction.prevention, riskLevel: prediction.hypertensionRisk } })}
-                                                style={{ flex: 1, maxWidth: '300px', background: 'transparent', border: '1px solid var(--accent-primary)', color: 'var(--accent-primary)' }}
-                                            >
-                                                <ShieldCheck size={20} />
-                                                View Prevention Roadmap
-                                            </button>
-                                        )}
+                                    <div className="visual-pipeline-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem' }}>
+                                        <div className="visual-step">
+                                            <p className="step-label" style={{ fontSize: '0.7rem', color: 'var(--accent-primary)', marginBottom: '0.75rem', fontWeight: 600 }}>I. GREEN CHANNEL</p>
+                                            <div className="img-frame" style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--glass-border)' }}>
+                                                <img src={visuals.green} style={{ width: '100%', display: 'block' }} alt="Green Channel" />
+                                            </div>
+                                        </div>
+                                        <div className="visual-step">
+                                            <p className="step-label" style={{ fontSize: '0.7rem', color: 'var(--accent-primary)', marginBottom: '0.75rem', fontWeight: 600 }}>II. U-NET SEGMENTATION</p>
+                                            <div className="img-frame" style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--glass-border)', background: '#000' }}>
+                                                <img src={visuals.segmentation} style={{ width: '100%', display: 'block', filter: 'invert(1)' }} alt="Segmentation" />
+                                            </div>
+                                        </div>
+                                        <div className="visual-step">
+                                            <p className="step-label" style={{ fontSize: '0.7rem', color: 'var(--accent-primary)', marginBottom: '0.75rem', fontWeight: 600 }}>III. GRAD-CAM HEATMAP</p>
+                                            <div className="img-frame" style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--glass-border)' }}>
+                                                <img src={visuals.heatmap} style={{ width: '100%', display: 'block' }} alt="Heatmap" />
+                                            </div>
+                                        </div>
                                     </div>
                                 </motion.div>
                             )}
-                        </div>
-                    </section>
+
+                            {/* 2. Analysis Results BELOW */}
+                            <section className="results-card glass-panel" style={{ width: '100%' }}>
+                                <div className="results-header">
+                                    <h2 style={{ fontSize: '1.25rem' }}>Analysis Results & Clinical Synthesis</h2>
+                                </div>
+
+                                <div className="results-body">
+                                    {!prediction && !loading && (
+                                        <div className="empty-state">
+                                            <Activity size={32} color="var(--text-dim)" style={{ marginBottom: '1rem' }} />
+                                            <h3>Awaiting Scan Initialization</h3>
+                                            <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem', marginTop: '0.5rem', maxWidth: '300px' }}>
+                                                Upload a fundus image to begin clinical analysis. The system is dataset-independent at runtime and operates solely on real-time user-uploaded images.
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {loading && (
+                                        <div className="empty-state">
+                                            <div className="loading-orbit">
+                                                <div className="orbit-circle"></div>
+                                                <ScanHeart size={32} color="var(--accent-primary)" />
+                                            </div>
+                                            <p style={{ marginTop: '1.5rem', color: 'var(--accent-primary)', fontWeight: 600 }}>Running Neural Diagnostics...</p>
+                                        </div>
+                                    )}
+
+                                    {prediction && (
+                                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                                            <div className="results-top-strip" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
+                                                <div className="risk-score-display">
+                                                    <span className={`risk-badge ${prediction.hypertensionRisk === 'Low' ? 'badge-low' :
+                                                        prediction.hypertensionRisk === 'Medium' ? 'badge-mod' : 'badge-high'
+                                                        }`}>
+                                                        {prediction.hypertensionRisk.toUpperCase()} RISK
+                                                    </span>
+                                                    <h2 className="risk-title font-heading" style={{ fontSize: '4rem', margin: '0.5rem 0' }}>{(prediction.riskScore).toFixed(1)}%</h2>
+                                                    <p className="risk-desc">Cardiovascular Health Index</p>
+                                                </div>
+                                                <div style={{ textAlign: 'right' }}>
+                                                    <Heart color="var(--accent-primary)" size={64} style={{ animation: 'pulse-glow 2s infinite' }} />
+                                                    <p style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginTop: '0.5rem' }}>Empirical Reference Thresholds Applied</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="metrics-grid" style={{ marginBottom: '2.5rem' }}>
+                                                <div className="metric-item">
+                                                    <div className="metric-value accent-text">{prediction.avr}</div>
+                                                    <div className="metric-name">A:V Ratio</div>
+                                                </div>
+                                                <div className="metric-item">
+                                                    <div className="metric-value accent-text">{(prediction.fractalDimension).toFixed(3)}</div>
+                                                    <div className="metric-name">Fractal Dimension</div>
+                                                </div>
+                                                <div className="metric-item">
+                                                    <div className="metric-value accent-text">{prediction.hypertensionRisk}</div>
+                                                    <div className="metric-name">HTN Category</div>
+                                                </div>
+                                            </div>
+
+                                            {/* Anomalies Section */}
+                                            <div className="anomalies-section" style={{ padding: '1.5rem', background: 'rgba(255,50,50,0.03)', borderRadius: '16px', border: '1px solid rgba(255,50,50,0.1)', marginBottom: '1.5rem' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+                                                    <AlertTriangle size={18} color="#ff3d00" />
+                                                    <h4 style={{ color: '#ff3d00', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Detected Anomalies</h4>
+                                                </div>
+                                                {prediction.detectedAnomalies && prediction.detectedAnomalies.length > 0 ? (
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                                        {prediction.detectedAnomalies.map((anomaly, idx) => (
+                                                            <div key={idx} style={{
+                                                                padding: '1rem',
+                                                                background: 'rgba(255,61,0,0.05)',
+                                                                borderRadius: '12px',
+                                                                border: '1px solid rgba(255,61,0,0.15)'
+                                                            }}>
+                                                                <div style={{ fontWeight: 700, color: '#ff3d00', marginBottom: '0.5rem', fontSize: '0.9rem' }}>
+                                                                    {anomaly.name}
+                                                                </div>
+                                                                <ul style={{ margin: 0, paddingLeft: '1.2rem', color: 'var(--text-dim)', fontSize: '0.8rem' }}>
+                                                                    {anomaly.symptoms.map((symptom, sIdx) => (
+                                                                        <li key={sIdx} style={{ marginBottom: '0.2rem' }}>{symptom}</li>
+                                                                    ))}
+                                                                </ul>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <p style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>No significant vascular anomalies detected in this scan.</p>
+                                                )}
+                                            </div>
+
+                                            <div className="clinical-insights-box" style={{ padding: '1.5rem', background: 'rgba(255,255,255,0.03)', borderRadius: '16px', borderLeft: '4px solid var(--accent-primary)', marginBottom: '1rem' }}>
+                                                <h4 style={{ fontSize: '0.8rem', color: 'var(--accent-primary)', textTransform: 'uppercase', marginBottom: '0.75rem', letterSpacing: '1px' }}>AI Diagnostic Insights</h4>
+                                                <p style={{ fontSize: '1rem', color: 'var(--text-vibrant)', lineHeight: '1.6', letterSpacing: '0.2px' }}>{prediction.insights}</p>
+                                            </div>
+
+                                            <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', fontSize: '0.75rem', color: 'var(--text-dim)', marginBottom: '1.5rem', border: '1px solid var(--glass-border)' }}>
+                                                <p style={{ marginBottom: '0.5rem' }}>
+                                                    <strong>Risk Formula Justification:</strong> AVR is given higher weight (60%) due to its strong clinical association with hypertension, while vessel tortuosity (40%) provides supplementary structural information.
+                                                </p>
+                                                <p>
+                                                    <strong>Scope Reminder:</strong> This system is a non-diagnostic, AI-assisted decision-support tool and does not replace clinical evaluation.
+                                                </p>
+                                            </div>
+
+                                            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginBottom: '1rem' }}>
+                                                <button className="btn-action" onClick={generatePDF} disabled={!prediction} style={{ flex: 1, maxWidth: '300px' }}>
+                                                    <FileDown size={20} />
+                                                    Export Clinical Results
+                                                </button>
+                                                
+                                                {prediction.prevention && (
+                                                    <button 
+                                                        className="btn-action" 
+                                                        onClick={() => navigate('/prevention', { state: { prevention: prediction.prevention, riskLevel: prediction.hypertensionRisk } })}
+                                                        style={{ flex: 1, maxWidth: '300px', background: 'transparent', border: '1px solid var(--accent-primary)', color: 'var(--accent-primary)' }}
+                                                    >
+                                                        <ShieldCheck size={20} />
+                                                        View Prevention Roadmap
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </div>
+                            </section>
+                        </>
+                    )}
                 </div>
             </main>
             
